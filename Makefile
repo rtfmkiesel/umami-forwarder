@@ -3,7 +3,7 @@ make:
 	GO_ENABLED=0 GOOS=linux \
 	go build \
 		-ldflags="-s -w \
-			-X main.version=@`git tag`" \
+			-X main.version=@`git describe --tags`" \
 		-o ./umami-forwarder ./main.go
 
 .PHONY: lint
@@ -20,10 +20,10 @@ updatepackages:
 
 .PHONY: docker-image
 docker-image:
-	docker build . --tag ghcr.io/rtfmkiesel/umami-forwarder:`git tag`
+	docker build . --tag ghcr.io/rtfmkiesel/umami-forwarder:${shell git describe --tags}
 	docker build . --tag ghcr.io/rtfmkiesel/umami-forwarder:latest
 
 .PHONY: docker-push
 docker-push:
-	docker push ghcr.io/rtfmkiesel/umami-forwarder:`git tag`
+	docker push ghcr.io/rtfmkiesel/umami-forwarder:${shell git describe --tags}
 	docker push ghcr.io/rtfmkiesel/umami-forwarder:latest
