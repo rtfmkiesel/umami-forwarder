@@ -1,0 +1,74 @@
+services:
+  traefik:
+    image: "traefik:latest"
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:9999:9999"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
+    depends_on:
+      - umami-forwarder
+      - nginx
+    restart: unless-stopped
+
+  # This is just the upstream service serving your website
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ../_html:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+  umami:
+    image: ghcr.io/umami-software/umami:3.0.0
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://umami:umami@umami-db:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: replace-me-with-a-random-string
+      DISABLE_UPDATES: 1
+      DISABLE_TELEMETRY: 1
+      PRIVATE_MODE: 1
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  umami-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+    volumes:
+      - umami-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  umami-forwarder:
+    image: ghcr.io/rtfmkiesel/umami-forwarder
+    environment:
+      COLLECTION_URL: http://umami:3000/api/send
+      WEBSITE_ID:  ca7f3ee6-e396-4bdb-858f-983978179794 
+      IP_HEADER: X-Real-IP
+      DEBUG: 1
+    depends_on:
+      umami:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  umami-db-data:

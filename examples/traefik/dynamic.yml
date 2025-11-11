@@ -1,0 +1,27 @@
+http:
+  routers:
+    static:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - web
+      service: mirror
+
+  services:
+    mirror:
+      mirroring:
+        service: nginx
+        mirrorBody: false
+        maxBodySize: -1
+        mirrors:
+          - name: umami-forwarder
+            percent: 100
+
+    nginx:
+      loadBalancer:
+        servers:
+          - url: "http://nginx:80"
+
+    umami-forwarder:
+      loadBalancer:
+        servers:
+          - url: "http://umami-forwarder:8080"

@@ -1,0 +1,21 @@
+:9999 {
+	route {
+		mirror {
+			no_log
+
+			primary {
+				root * /var/www/html
+				file_server
+			}
+
+			secondary {
+				reverse_proxy http://umami-forwarder:8080 {
+					header_up X-Real-IP {remote_host}
+					header_up X-Forwarded-Host {http.request.host}
+					header_up X-Forwarded-Proto {http.request.scheme}
+					header_up X-Forwarded-Uri {http.request.uri}
+				}
+			}
+		}
+	}
+}
