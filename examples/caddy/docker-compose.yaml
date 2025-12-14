@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
 
   umami:
-    image: ghcr.io/umami-software/umami:3.0.0
+    image: ghcr.io/umami-software/umami:3.0.3
     ports:
       - "127.0.0.1:3000:3000"
     environment:
