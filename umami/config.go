@@ -3,6 +3,7 @@ package umami
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	logger "github.com/rtfmkiesel/kisslog"
 )
@@ -23,6 +24,29 @@ func ConfigFromEnv() (*ClientConfig, error) {
 	collectionURL := os.Getenv("COLLECTION_URL")
 	if collectionURL == "" {
 		return nil, log.NewError("COLLECTION_URL environment variable must be set")
+	}
+
+	ignoreMediaFilesStr := os.Getenv("IGNORE_MEDIA")
+	ignoreMediaFiles := false // default
+	if ignoreMediaFilesStr != "" {
+		b, err := strconv.ParseBool(ignoreMediaFilesStr)
+		if err != nil {
+			return nil, log.NewError("invalid IGNORE_MEDIA value: %v", err)
+		}
+		ignoreMediaFiles = b
+	}
+
+	ignoreExtRaw := os.Getenv("IGNORE_EXT")
+	ignoreExt := make(map[string]bool)
+	if ignoreExtRaw != "" {
+		parts := strings.SplitSeq(ignoreExtRaw, ",")
+		for p := range parts {
+			p = strings.TrimSpace(p)
+			if !strings.HasPrefix(p, ".") {
+				p = "." + p // Make sure to have a dot prefix
+			}
+			ignoreExt[p] = true
+		}
 	}
 
 	ipHeader := os.Getenv("IP_HEADER")
@@ -73,12 +97,15 @@ func ConfigFromEnv() (*ClientConfig, error) {
 	log.Info("Loaded config")
 
 	return &ClientConfig{
-		WebsiteId:     websiteID,
-		CollectionURL: collectionURL,
-		IpHeader:      ipHeader,
-		Timeout:       timeout,
-		Retries:       retries,
-		MaxRequests:   maxRequests,
-		IgnoreTLS:     ignoreTLS,
+		WebsiteId:        websiteID,
+		CollectionURL:    collectionURL,
+		IgnoreMediaFiles: ignoreMediaFiles,
+		IgnoreExtensions: ignoreExt,
+		SkipFiltering:    (!ignoreMediaFiles && len(ignoreExt) == 0),
+		IpHeader:         ipHeader,
+		Timeout:          timeout,
+		Retries:          retries,
+		MaxRequests:      maxRequests,
+		IgnoreTLS:        ignoreTLS,
 	}, nil
 }

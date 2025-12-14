@@ -1,7 +1,7 @@
 <h1 align="center">umami-forwarder</h1>
 
 <p align="center">
-  A simple tool to use <a href="https://github.com/umami-software/umami">Umami</a> invisible.<br>Benefit from statistics on JavaScript-Free sites, or even if users block your tracker. Docker image only 2.33MB!
+  A simple tool to use <a href="https://github.com/umami-software/umami">Umami</a> invisible.
 </p>
 
 <p align="center">
@@ -16,37 +16,23 @@
   </a>
 </p>
 
----
 
 ## How does this work?
 
 `umami-forwarder` works by receiving mirrored/shadowed HTTP requests from a reverse proxy, parsing them, and sending them to the collection endpoint of an Umami instance. This requires a reverse proxy capable of mirroring/shadowing HTTP requests.
 
-> [!NOTE]  
-> This is very much beta software. Expect all the bugs.
+This enables basic statistics in Umami on JavaScript-Free sites, as well as on sites where the target audience is known to block trackers.
+
+_This is very much beta software. Expect all the bugs._
 
 ## Setup
 
-**One instance of `umami-forwarder` per site is required.**
-
-### Environment Variables
-
-`umami-forwarder` is configured through the following environment variables.
-
-| Environment Variable | Description                                                  | Default Value |
-|----------------------|--------------------------------------------------------------|---------------|
-| `WEBSITE_ID`         | The website ID (from Umami dashboard)                        | -             |
-| `COLLECTION_URL`     | The absolute URL to the Umami collection endpoint            | -             |
-| `IP_HEADER`          | Which header contains the real client IP-address             | `X-Real-IP`   |
-| `HTTP_TIMEOUT`       | HTTP timeout in seconds when connecting to Umami             | `5`           |
-| `HTTP_RETRIES`       | HTTP retries when connecting to Umami                        | `3`           |
-| `HTTP_MAX_REQUESTS`  | Limit on how many concurrent HTTP requests are made to Umami | `25`          |
-| `HTTP_IGNORE_TLS`    | Ignore TLS errors when connecting to Umami                   | `false`       |
-| `DEBUG`              | Enable debug output                                          | -             |
+> [!NOTE]  
+> One instance of `umami-forwarder` per site is required.
 
 ### Docker
 
-This is meant to be used inside a Docker environment. See the `umami-forwarder` block from below or check out the [examples](./examples). 
+This is meant to be used inside a Docker environment. See the `umami-forwarder` block from below or check out the [examples](./examples).
 
 ```yaml
 services:
@@ -61,6 +47,23 @@ services:
         condition: service_healthy
     restart: unless-stopped
 ```
+
+#### Environment Variables
+
+`umami-forwarder` is configured through the following environment variables:
+
+| Environment Variable | Description                                                     | Default Value |
+|----------------------|-----------------------------------------------------------------|---------------|
+| `WEBSITE_ID`         | The website ID (from the Umami dashboard)                       | -             |
+| `COLLECTION_URL`     | The absolute URL to the Umami collection endpoint               | -             |
+| `IGNORE_MEDIA`       | Ignore (not forward) common media files                         | `false`       |
+| `IGNORE_EXT`         | Comma separated list of file extensions to ignore (not forward) | -             |
+| `IP_HEADER`          | Which HTTP header contains the real client IP-address           | `X-Real-IP`   |
+| `HTTP_TIMEOUT`       | HTTP timeout in seconds when connecting to Umami                | `5`           |
+| `HTTP_RETRIES`       | HTTP retries when connecting to Umami                           | `3`           |
+| `HTTP_MAX_REQUESTS`  | Limit on how many concurrent HTTP requests are made to Umami    | `25`          |
+| `HTTP_IGNORE_TLS`    | Ignore TLS errors when connecting to Umami                      | `false`       |
+| `DEBUG`              | Enable debug output                                             | -             |
 
 ### Reverse Proxy
 

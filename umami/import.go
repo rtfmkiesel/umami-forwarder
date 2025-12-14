@@ -15,6 +15,11 @@ import (
 func (c *Client) ImportReqWithRetries(r *http.Request) error {
 	var log = logger.New("umami/import/ImportReqWithRetries")
 
+	// Check if the request should be ignored
+	if !c.shouldImportReq(r) {
+		return nil
+	}
+
 	for attempt := 1; attempt <= c.config.Retries; attempt++ {
 		if attempt > 1 {
 			time.Sleep(time.Duration(attempt) * time.Second)
