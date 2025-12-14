@@ -41,7 +41,7 @@ var commonMediaFiles = map[string]bool{
 	".eot":   true,
 }
 
-var log = logger.New("umami/filter.go")
+var filterLog = logger.New("umami/filter.go")
 
 func (c *Client) shouldImportReq(r *http.Request) bool {
 	if c.config.SkipFiltering {
@@ -52,13 +52,13 @@ func (c *Client) shouldImportReq(r *http.Request) bool {
 
 	// Custom user filter
 	if exists := c.config.IgnoreExtensions[ext]; exists {
-		log.Debug("Skipping request with extension %s (user filter)", ext)
+		filterLog.Debug("Skipping request with extension %s (user filter)", ext)
 		return false
 	}
 
 	// Common media files filter
 	if exists := commonMediaFiles[ext]; exists {
-		log.Debug("Skipping request with extension %s (media filter)", ext)
+		filterLog.Debug("Skipping request with extension %s (media filter)", ext)
 		return false
 	}
 

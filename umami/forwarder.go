@@ -6,22 +6,22 @@ import (
 	logger "github.com/rtfmkiesel/kisslog"
 )
 
+var forwardLog = logger.New("umami/forwarder.go")
+
 type Forwarder struct {
 	client *Client
-	log    *logger.Logger
 }
 
 func (c *Client) Forward() *Forwarder {
 	return &Forwarder{
 		client: c,
-		log:    logger.New("umami/forwarder"),
 	}
 }
 
 func (f *Forwarder) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		if err := f.client.ImportReqWithRetries(r); err != nil {
-			f.log.Error(err)
+			forwardLog.Error(err)
 		}
 	}()
 

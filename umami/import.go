@@ -12,8 +12,9 @@ import (
 	logger "github.com/rtfmkiesel/kisslog"
 )
 
+var importLog = logger.New("umami/import.go")
+
 func (c *Client) ImportReqWithRetries(r *http.Request) error {
-	var log = logger.New("umami/import/ImportReqWithRetries")
 
 	// Check if the request should be ignored
 	if !c.shouldImportReq(r) {
@@ -23,22 +24,20 @@ func (c *Client) ImportReqWithRetries(r *http.Request) error {
 	for attempt := 1; attempt <= c.config.Retries; attempt++ {
 		if attempt > 1 {
 			time.Sleep(time.Duration(attempt) * time.Second)
-			log.Warning("Retrying import for '%s' (attempt %d/%d)", r.URL, attempt, c.config.Retries)
+			importLog.Warning("Retrying import for '%s' (attempt %d/%d)", r.URL, attempt, c.config.Retries)
 		}
 
 		err := c.ImportReqOnce(r)
 		if err == nil {
 			return nil
 		}
-		log.Error(err)
+		importLog.Error(err)
 	}
 
-	return log.NewError("request for '%s' not imported: retries exhausted", r.URL)
+	return importLog.NewError("request for '%s' not imported: retries exhausted", r.URL)
 }
 
 func (c *Client) ImportReqOnce(r *http.Request) error {
-	var log = logger.New("umami/import/ImportReqOnce")
-
 	// Wait for a free slot
 	c.sem <- struct{}{}
 	defer func() {
@@ -47,27 +46,27 @@ func (c *Client) ImportReqOnce(r *http.Request) error {
 
 	jsonBody, err := c.reqToUmamiRequestJsonBody(r)
 	if err != nil {
-		return log.NewError("failed to import event: %v", err)
+		return importLog.NewError("failed to import event: %v", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPost, c.config.CollectionURL, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return log.NewError("failed to import event: %v", err)
+		return importLog.NewError("failed to import event: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", r.Header.Get("User-Agent")) // Set upstream user-agent as a fallback
 
-	log.Debug("Sending request to Umami: payload='%s'", jsonBody)
+	importLog.Debug("Sending request to Umami: payload='%s'", jsonBody)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return log.NewError("failed to import event: %v", err)
+		return importLog.NewError("failed to import event: %v", err)
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)
-		return log.NewError("failed to import event: request failed with status %d: %s", resp.StatusCode, body)
+		return importLog.NewError("failed to import event: request failed with status %d: %s", resp.StatusCode, body)
 	}
 
 	return nil

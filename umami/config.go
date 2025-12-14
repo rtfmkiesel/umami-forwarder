@@ -8,22 +8,22 @@ import (
 	logger "github.com/rtfmkiesel/kisslog"
 )
 
-func ConfigFromEnv() (*ClientConfig, error) {
-	log := logger.New("umami/ConfigFromEnv")
+var configLog = logger.New("umami/config.go")
 
+func ConfigFromEnv() (*ClientConfig, error) {
 	_, debug := os.LookupEnv("DEBUG")
 	logger.FlagDebug = debug
 
-	log.Debug("Loading config from environment variables")
+	configLog.Debug("Loading config from environment variables")
 
 	websiteID := os.Getenv("WEBSITE_ID")
 	if websiteID == "" {
-		return nil, log.NewError("WEBSITE_ID environment variable must be set")
+		return nil, configLog.NewError("WEBSITE_ID environment variable must be set")
 	}
 
 	collectionURL := os.Getenv("COLLECTION_URL")
 	if collectionURL == "" {
-		return nil, log.NewError("COLLECTION_URL environment variable must be set")
+		return nil, configLog.NewError("COLLECTION_URL environment variable must be set")
 	}
 
 	ignoreMediaFilesStr := os.Getenv("IGNORE_MEDIA")
@@ -31,7 +31,7 @@ func ConfigFromEnv() (*ClientConfig, error) {
 	if ignoreMediaFilesStr != "" {
 		b, err := strconv.ParseBool(ignoreMediaFilesStr)
 		if err != nil {
-			return nil, log.NewError("invalid IGNORE_MEDIA value: %v", err)
+			return nil, configLog.NewError("invalid IGNORE_MEDIA value: %v", err)
 		}
 		ignoreMediaFiles = b
 	}
@@ -51,7 +51,7 @@ func ConfigFromEnv() (*ClientConfig, error) {
 
 	ipHeader := os.Getenv("IP_HEADER")
 	if ipHeader == "" {
-		return nil, log.NewError("IP_HEADER environment variable must be set")
+		return nil, configLog.NewError("IP_HEADER environment variable must be set")
 	}
 
 	timeoutStr := os.Getenv("HTTP_TIMEOUT")
@@ -59,7 +59,7 @@ func ConfigFromEnv() (*ClientConfig, error) {
 	if timeoutStr != "" {
 		parsedTimeout, err := strconv.Atoi(timeoutStr)
 		if err != nil {
-			return nil, log.NewError("invalid TIMEOUT value: %v", err)
+			return nil, configLog.NewError("invalid TIMEOUT value: %v", err)
 		}
 		timeout = parsedTimeout
 	}
@@ -69,7 +69,7 @@ func ConfigFromEnv() (*ClientConfig, error) {
 	if retriesStr != "" {
 		parsedRetries, err := strconv.Atoi(retriesStr)
 		if err != nil {
-			return nil, log.NewError("invalid RETRIES value: %v", err)
+			return nil, configLog.NewError("invalid RETRIES value: %v", err)
 		}
 		retries = parsedRetries
 	}
@@ -79,7 +79,7 @@ func ConfigFromEnv() (*ClientConfig, error) {
 	if maxRequestsStr != "" {
 		parsedMaxRequests, err := strconv.Atoi(maxRequestsStr)
 		if err != nil {
-			return nil, log.NewError("invalid MAX_REQUESTS value: %v", err)
+			return nil, configLog.NewError("invalid MAX_REQUESTS value: %v", err)
 		}
 		maxRequests = parsedMaxRequests
 	}
@@ -89,12 +89,12 @@ func ConfigFromEnv() (*ClientConfig, error) {
 	if ignoreTLSStr != "" {
 		parsedIgnoreTLS, err := strconv.ParseBool(ignoreTLSStr)
 		if err != nil {
-			return nil, log.NewError("invalid IGNORE_TLS value: %v", err)
+			return nil, configLog.NewError("invalid IGNORE_TLS value: %v", err)
 		}
 		ignoreTLS = parsedIgnoreTLS
 	}
 
-	log.Info("Loaded config")
+	configLog.Info("Loaded config")
 
 	return &ClientConfig{
 		WebsiteId:        websiteID,
