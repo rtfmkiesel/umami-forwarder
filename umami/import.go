@@ -85,7 +85,7 @@ func (c *Client) reqToUmamiRequestJsonBody(r *http.Request) ([]byte, error) {
 		return nil, fmt.Errorf("no '%s' header found, cannot create request for Umami", c.config.IpHeader)
 	}
 
-	ref := strings.TrimSpace(r.Header.Get("Referrer"))
+	ref := strings.TrimSpace(r.Header.Get("Referer"))
 	ua := strings.TrimSpace(r.Header.Get("User-Agent"))
 	if ua == "" {
 		return nil, fmt.Errorf("no 'User-Agent' header found, cannot create request for Umami")
@@ -95,7 +95,7 @@ func (c *Client) reqToUmamiRequestJsonBody(r *http.Request) ([]byte, error) {
 		"website":    c.config.WebsiteId,
 		"hostname":   r.Host,
 		"url":        r.URL.String(),
-		"referrer":   ref,
+		"referer":    ref,
 		"user-agent": ua,
 		"ip":         ip,
 	}
