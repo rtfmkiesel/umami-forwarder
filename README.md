@@ -1,13 +1,8 @@
-<h1 align="center">umami-forwarder</h1>
+# umami-forwarder
 
-<p align="center">
-  A simple tool to use <a href="https://github.com/umami-software/umami">Umami</a> invisible.
-</p>
+_A simple tool to use <a href="https://github.com/umami-software/umami">Umami</a> invisible._
 
-<p align="center">
-  <a href="https://github.com/rtfmkiesel/umami-forwarder">
-    <img src="https://img.shields.io/github/stars/rtfmkiesel/umami-forwarder" alt="Stars">
-  </a>
+<p>
   <a href="https://github.com/rtfmkiesel/umami-forwarder/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/rtfmkiesel/umami-forwarder" alt="LICENSE">
   </a>
