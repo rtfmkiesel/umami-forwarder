@@ -48,11 +48,18 @@ func (c *Client) shouldImportReq(r *http.Request) bool {
 		return true
 	}
 
+	// IP filter
+	ip := r.Header.Get(c.config.IpHeader)
+	if exists := c.config.IgnoreIps[ip]; exists {
+		filterLog.Debug("Skipping request from IP %s (user IP filter)", ip)
+		return false
+	}
+
 	ext := filepath.Ext(r.URL.Path)
 
 	// Custom user filter
 	if exists := c.config.IgnoreExtensions[ext]; exists {
-		filterLog.Debug("Skipping request with extension %s (user filter)", ext)
+		filterLog.Debug("Skipping request with extension %s (user media filter)", ext)
 		return false
 	}
 

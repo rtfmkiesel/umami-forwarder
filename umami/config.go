@@ -1,6 +1,7 @@
 package umami
 
 import (
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -54,6 +55,18 @@ func ConfigFromEnv() (*ClientConfig, error) {
 		return nil, configLog.NewError("IP_HEADER environment variable must be set")
 	}
 
+	ignoreIpsRaw := os.Getenv("IGNORE_IPS")
+	ignoreIps := make(map[string]bool)
+	if ignoreIpsRaw != "" {
+		parts := strings.SplitSeq(ignoreIpsRaw, ",")
+		for p := range parts {
+			p = strings.TrimSpace(p)
+			if ip := net.ParseIP(p); ip != nil {
+				ignoreIps[p] = true
+			}
+		}
+	}
+
 	timeoutStr := os.Getenv("HTTP_TIMEOUT")
 	timeout := 5 // default
 	if timeoutStr != "" {
@@ -101,8 +114,9 @@ func ConfigFromEnv() (*ClientConfig, error) {
 		CollectionURL:    collectionURL,
 		IgnoreMediaFiles: ignoreMediaFiles,
 		IgnoreExtensions: ignoreExt,
-		SkipFiltering:    (!ignoreMediaFiles && len(ignoreExt) == 0),
+		SkipFiltering:    (!ignoreMediaFiles && len(ignoreExt) == 0 && len(ignoreIps) == 0),
 		IpHeader:         ipHeader,
+		IgnoreIps:        ignoreIps,
 		Timeout:          timeout,
 		Retries:          retries,
 		MaxRequests:      maxRequests,

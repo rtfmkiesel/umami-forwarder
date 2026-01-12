@@ -54,6 +54,7 @@ services:
 | `IGNORE_MEDIA`       | Ignore (not forward) common media files                         | `false`       |
 | `IGNORE_EXT`         | Comma separated list of file extensions to ignore (not forward) | -             |
 | `IP_HEADER`          | Which HTTP header contains the real client IP-address           | `X-Real-IP`   |
+| `IGNORE_IPS`         | Comma separated list of IPv4 addresses to ignore (not forward)  | -             |
 | `HTTP_TIMEOUT`       | HTTP timeout in seconds when connecting to Umami                | `5`           |
 | `HTTP_RETRIES`       | HTTP retries when connecting to Umami                           | `3`           |
 | `HTTP_MAX_REQUESTS`  | Limit on how many concurrent HTTP requests are made to Umami    | `25`          |

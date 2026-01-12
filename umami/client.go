@@ -11,8 +11,9 @@ type ClientConfig struct {
 	CollectionURL    string          // The absolute Umami collection URL, e.g. http://umami:3000/api/send
 	IgnoreMediaFiles bool            // Do not forward common media files
 	IgnoreExtensions map[string]bool // File extension which are not going to be forwarded
-	SkipFiltering    bool            // !IgnoreMediaFiles && len(IgnoreExtensions) == 0
+	SkipFiltering    bool            // !IgnoreMediaFiles && len(IgnoreExtensions) == 0 && len(IgnoreIps) == 00
 	IpHeader         string          // Which header sent to the forwarder contains the real IP
+	IgnoreIps        map[string]bool // IPv4 addresses which are not going to be forwarded
 	Timeout          int             // HTTP timeout in seconds when sending requests to Umami
 	Retries          int             // HTTP retries when sending requests to Umami
 	MaxRequests      int             // Max. concurrent HTTP requests to Umami
