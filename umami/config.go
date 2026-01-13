@@ -1,125 +1,152 @@
 package umami
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
-
-	logger "github.com/rtfmkiesel/kisslog"
 )
 
-var configLog = logger.New("umami/config.go")
+type ClientConfig struct {
+	WebsiteId        string          // The website ID which is tagged onto the incoming requests (UUID)
+	CollectionURL    string          // The absolute Umami collection URL, e.g. http://umami:3000/api/send
+	IgnoreMediaFiles bool            // Do not forward common media files
+	IgnoreExtensions map[string]bool // File extension which are not going to be forwarded
+	SkipFiltering    bool            // !ignoreMediaFiles && len(ignoreExt) == 0 && len(ignoreIps) == 0
+	IpHeader         string          // Which header sent to the forwarder contains the real IP
+	IgnoreIPs        map[string]bool // IPv4 addresses which are not going to be forwarded
+	Timeout          int             // HTTP timeout in seconds when sending requests to Umami
+	Retries          int             // HTTP retries when sending requests to Umami
+	MaxRequests      int             // Max. concurrent HTTP requests to Umami
+	IgnoreTLS        bool            // Ignore TLS errors when connecting to Umami
+}
 
+// Loads the config from ENV variables defined in README.md
 func ConfigFromEnv() (*ClientConfig, error) {
-	_, debug := os.LookupEnv("DEBUG")
-	logger.FlagDebug = debug
+	log.Printf("Loading config from environment variables\n")
 
-	configLog.Debug("Loading config from environment variables")
-
-	websiteID := os.Getenv("WEBSITE_ID")
+	websiteID := strings.TrimSpace(os.Getenv("WEBSITE_ID"))
 	if websiteID == "" {
-		return nil, configLog.NewError("WEBSITE_ID environment variable must be set")
+		return nil, fmt.Errorf("environment variable WEBSITE_ID must be set")
 	}
 
-	collectionURL := os.Getenv("COLLECTION_URL")
+	collectionURL := strings.TrimSpace(os.Getenv("COLLECTION_URL"))
 	if collectionURL == "" {
-		return nil, configLog.NewError("COLLECTION_URL environment variable must be set")
+		return nil, fmt.Errorf("environment variable  COLLECTION_URL must be set")
 	}
 
-	ignoreMediaFilesStr := os.Getenv("IGNORE_MEDIA")
-	ignoreMediaFiles := false // default
-	if ignoreMediaFilesStr != "" {
-		b, err := strconv.ParseBool(ignoreMediaFilesStr)
-		if err != nil {
-			return nil, configLog.NewError("invalid IGNORE_MEDIA value: %v", err)
-		}
-		ignoreMediaFiles = b
-	}
-
-	ignoreExtRaw := os.Getenv("IGNORE_EXT")
-	ignoreExt := make(map[string]bool)
-	if ignoreExtRaw != "" {
-		parts := strings.SplitSeq(ignoreExtRaw, ",")
-		for p := range parts {
-			p = strings.TrimSpace(p)
-			if !strings.HasPrefix(p, ".") {
-				p = "." + p // Make sure to have a dot prefix
-			}
-			ignoreExt[p] = true
-		}
-	}
-
-	ipHeader := os.Getenv("IP_HEADER")
+	ipHeader := strings.TrimSpace(os.Getenv("IP_HEADER"))
 	if ipHeader == "" {
-		return nil, configLog.NewError("IP_HEADER environment variable must be set")
+		return nil, fmt.Errorf("environment variable IP_HEADER must be set")
 	}
 
-	ignoreIpsRaw := os.Getenv("IGNORE_IPS")
-	ignoreIps := make(map[string]bool)
-	if ignoreIpsRaw != "" {
-		parts := strings.SplitSeq(ignoreIpsRaw, ",")
-		for p := range parts {
-			p = strings.TrimSpace(p)
-			if ip := net.ParseIP(p); ip != nil {
-				ignoreIps[p] = true
-			}
-		}
+	ignoreMediaFiles, err := parseBoolEnv("IGNORE_MEDIA", false)
+	if err != nil {
+		return nil, fmt.Errorf("invalid IGNORE_MEDIA value: %v", err)
 	}
 
-	timeoutStr := os.Getenv("HTTP_TIMEOUT")
-	timeout := 5 // default
-	if timeoutStr != "" {
-		parsedTimeout, err := strconv.Atoi(timeoutStr)
-		if err != nil {
-			return nil, configLog.NewError("invalid TIMEOUT value: %v", err)
-		}
-		timeout = parsedTimeout
+	ignoreTLS, err := parseBoolEnv("HTTP_IGNORE_TLS", false)
+	if err != nil {
+		return nil, fmt.Errorf("invalid IGNORE_TLS value: %v", err)
 	}
 
-	retriesStr := os.Getenv("HTTP_RETRIES")
-	retries := 3 // default
-	if retriesStr != "" {
-		parsedRetries, err := strconv.Atoi(retriesStr)
-		if err != nil {
-			return nil, configLog.NewError("invalid RETRIES value: %v", err)
-		}
-		retries = parsedRetries
+	timeout, err := parseIntEnv("HTTP_TIMEOUT", 5)
+	if err != nil {
+		return nil, fmt.Errorf("invalid HTTP_TIMEOUT value: %v", err)
 	}
 
-	maxRequestsStr := os.Getenv("HTTP_MAX_REQUESTS")
-	maxRequests := 25 // default
-	if maxRequestsStr != "" {
-		parsedMaxRequests, err := strconv.Atoi(maxRequestsStr)
-		if err != nil {
-			return nil, configLog.NewError("invalid MAX_REQUESTS value: %v", err)
-		}
-		maxRequests = parsedMaxRequests
+	retries, err := parseIntEnv("HTTP_RETRIES", 3)
+	if err != nil {
+		return nil, fmt.Errorf("invalid HTTP_RETRIES value: %v", err)
 	}
 
-	ignoreTLSStr := os.Getenv("HTTP_IGNORE_TLS")
-	ignoreTLS := false // default
-	if ignoreTLSStr != "" {
-		parsedIgnoreTLS, err := strconv.ParseBool(ignoreTLSStr)
-		if err != nil {
-			return nil, configLog.NewError("invalid IGNORE_TLS value: %v", err)
-		}
-		ignoreTLS = parsedIgnoreTLS
+	maxRequests, err := parseIntEnv("HTTP_MAX_REQUESTS", 25)
+	if err != nil {
+		return nil, fmt.Errorf("invalid HTTP_MAX_REQUESTS value: %v", err)
 	}
 
-	configLog.Info("Loaded config")
+	ignoreExt := parseExtensionsEnv("IGNORE_EXT")
+
+	ignoreIps := parseIPsEnv("IGNORE_IPS")
 
 	return &ClientConfig{
 		WebsiteId:        websiteID,
 		CollectionURL:    collectionURL,
 		IgnoreMediaFiles: ignoreMediaFiles,
 		IgnoreExtensions: ignoreExt,
-		SkipFiltering:    (!ignoreMediaFiles && len(ignoreExt) == 0 && len(ignoreIps) == 0),
+		SkipFiltering:    !ignoreMediaFiles && len(ignoreExt) == 0 && len(ignoreIps) == 0,
 		IpHeader:         ipHeader,
-		IgnoreIps:        ignoreIps,
+		IgnoreIPs:        ignoreIps,
 		Timeout:          timeout,
 		Retries:          retries,
 		MaxRequests:      maxRequests,
 		IgnoreTLS:        ignoreTLS,
 	}, nil
+}
+
+func parseBoolEnv(key string, defaultVal bool) (bool, error) {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultVal, nil
+	}
+	return strconv.ParseBool(val)
+}
+
+func parseIntEnv(key string, defaultVal int) (int, error) {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultVal, nil
+	}
+
+	intVal, err := strconv.Atoi(val)
+	if intVal == 0 {
+		return 0, fmt.Errorf("invalid %s value: cannot be 0", key)
+	}
+
+	return intVal, err
+}
+
+func parseExtensionsEnv(key string) map[string]bool {
+	raw := os.Getenv(key)
+	raw = strings.TrimSpace(raw)
+
+	result := make(map[string]bool)
+	if raw == "" {
+		return result
+	}
+
+	for p := range strings.SplitSeq(raw, ",") {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if !strings.HasPrefix(p, ".") {
+			p = "." + p
+		}
+		result[p] = true
+	}
+	return result
+}
+
+func parseIPsEnv(key string) map[string]bool {
+	raw := os.Getenv(key)
+	raw = strings.TrimSpace(raw)
+
+	result := make(map[string]bool)
+	if raw == "" {
+		return result
+	}
+
+	for p := range strings.SplitSeq(raw, ",") {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if ip := net.ParseIP(p); ip != nil {
+			result[p] = true
+		}
+	}
+	return result
 }

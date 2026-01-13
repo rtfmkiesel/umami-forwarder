@@ -64,7 +64,6 @@ services:
       COLLECTION_URL: http://umami:3000/api/send
       WEBSITE_ID:  ca7f3ee6-e396-4bdb-858f-983978179794 
       IP_HEADER: X-Real-IP
-      DEBUG: 1
     depends_on:
       umami:
         condition: service_healthy

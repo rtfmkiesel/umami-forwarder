@@ -1,6 +1,6 @@
 # umami-forwarder
 
-_A simple tool to use <a href="https://github.com/umami-software/umami">Umami</a> invisible._
+_A simple tool to use <a href="https://github.com/umami-software/umami">Umami</a> invisible. 0 dependencies, Docker image only ~2.3MB!_
 
 <p>
   <a href="https://github.com/rtfmkiesel/umami-forwarder/blob/main/LICENSE">
@@ -32,11 +32,10 @@ This is meant to be used inside a Docker environment. See the `umami-forwarder` 
 ```yaml
 services:
   umami-forwarder:
-    image: ghcr.io/rtfmkiesel/umami-forwarder
+    image: ghcr.io/rtfmkiesel/umami-forwarder:latest
     environment:
       COLLECTION_URL: http://umami:3000/api/send
       WEBSITE_ID:  ca7f3ee6-e396-4bdb-858f-983978179794 
-      IP_HEADER: X-Real-IP
     depends_on:
       umami:
         condition: service_healthy
@@ -49,8 +48,8 @@ services:
 
 | Environment Variable | Description                                                     | Default Value |
 |----------------------|-----------------------------------------------------------------|---------------|
-| `WEBSITE_ID`         | The website ID (from the Umami dashboard)                       | -             |
-| `COLLECTION_URL`     | The absolute URL to the Umami collection endpoint               | -             |
+| `WEBSITE_ID`         | The website ID (from the Umami dashboard), **required**         | -             |
+| `COLLECTION_URL`     | The absolute URL to the Umami collection endpoint, **required** | -             |
 | `IGNORE_MEDIA`       | Ignore (not forward) common media files                         | `false`       |
 | `IGNORE_EXT`         | Comma separated list of file extensions to ignore (not forward) | -             |
 | `IP_HEADER`          | Which HTTP header contains the real client IP-address           | `X-Real-IP`   |
@@ -59,7 +58,6 @@ services:
 | `HTTP_RETRIES`       | HTTP retries when connecting to Umami                           | `3`           |
 | `HTTP_MAX_REQUESTS`  | Limit on how many concurrent HTTP requests are made to Umami    | `25`          |
 | `HTTP_IGNORE_TLS`    | Ignore TLS errors when connecting to Umami                      | `false`       |
-| `DEBUG`              | Enable debug output                                             | -             |
 
 ### Reverse Proxy
 

@@ -2,8 +2,7 @@
 make:
 	GO_ENABLED=0 GOOS=linux \
 	go build \
-		-ldflags="-s -w \
-			-X main.version=@`git describe --tags`" \
+		-ldflags="-s -w" \
 		-o ./umami-forwarder ./main.go
 
 .PHONY: lint

@@ -10,12 +10,12 @@ WORKDIR /src
 RUN mkdir -p /src/bin
 RUN git config --global --add safe.directory /src
 
-COPY go.mod .
-COPY go.sum .
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-	--mount=type=bind,source=go.sum,target=go.sum \
-	--mount=type=bind,source=go.mod,target=go.mod \
-	go mod download
+#COPY go.mod .
+#COPY go.sum .
+#RUN --mount=type=cache,target=/go/pkg/mod/ \
+#	--mount=type=bind,source=go.sum,target=go.sum \
+#	--mount=type=bind,source=go.mod,target=go.mod \
+#	go mod download
 
 COPY . .
 ENV GOCACHE=/root/.cache/go-build

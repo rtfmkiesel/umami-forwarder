@@ -5,17 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
-
-	logger "github.com/rtfmkiesel/kisslog"
 )
 
-var importLog = logger.New("umami/import.go")
-
+// Imports a request by forwarding it up to a maximum amount of times
+// as defined by the config
 func (c *Client) ImportReqWithRetries(r *http.Request) error {
-
 	// Check if the request should be ignored
 	if !c.shouldImportReq(r) {
 		return nil
@@ -24,20 +22,26 @@ func (c *Client) ImportReqWithRetries(r *http.Request) error {
 	for attempt := 1; attempt <= c.config.Retries; attempt++ {
 		if attempt > 1 {
 			time.Sleep(time.Duration(attempt) * time.Second)
-			importLog.Warning("Retrying import for '%s' (attempt %d/%d)", r.URL, attempt, c.config.Retries)
+			log.Printf("WAR: Retrying import for '%s' (attempt %d/%d)\n", r.URL, attempt, c.config.Retries)
 		}
 
-		err := c.ImportReqOnce(r)
+		shouldRetry, err := c.ImportReqOnce(r)
 		if err == nil {
 			return nil
 		}
-		importLog.Error(err)
+
+		if !shouldRetry {
+			return err
+		}
+
+		log.Printf("ERR: %s\n", err)
 	}
 
-	return importLog.NewError("request for '%s' not imported: retries exhausted", r.URL)
+	return fmt.Errorf("request for '%s' not imported: retries exhausted", r.URL)
 }
 
-func (c *Client) ImportReqOnce(r *http.Request) error {
+// Imports a request by forwarding it once
+func (c *Client) ImportReqOnce(r *http.Request) (bool, error) {
 	// Wait for a free slot
 	c.sem <- struct{}{}
 	defer func() {
@@ -46,30 +50,34 @@ func (c *Client) ImportReqOnce(r *http.Request) error {
 
 	jsonBody, err := c.reqToUmamiRequestJsonBody(r)
 	if err != nil {
-		return importLog.NewError("failed to import event: %v", err)
+		return false, fmt.Errorf("failed to import event: %v", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPost, c.config.CollectionURL, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return importLog.NewError("failed to import event: %v", err)
+		return false, fmt.Errorf("failed to import event: %v", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", r.Header.Get("User-Agent")) // Set upstream user-agent as a fallback
 
-	importLog.Debug("Sending request to Umami: payload='%s'", jsonBody)
+	log.Printf("Sending request to Umami: payload='%s'\n", jsonBody)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return importLog.NewError("failed to import event: %v", err)
+		return false, fmt.Errorf("failed to import event: %v", err)
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)
-		return importLog.NewError("failed to import event: request failed with status %d: %s", resp.StatusCode, body)
+		errMsg := fmt.Errorf("failed to import event: request failed with status %d: %s", resp.StatusCode, body)
+
+		shouldRetry := resp.StatusCode < 400 || resp.StatusCode >= 500
+		return shouldRetry, errMsg
 	}
 
-	return nil
+	// Success
+	return false, nil
 }
 
 // Internal struct when sending Umami events
@@ -79,6 +87,8 @@ type clientUmamiRequest struct {
 	Payload map[string]any `json:"payload"`
 }
 
+// Formats a *http.Request to the JSON body needed from the Umami
+// collection endpoint
 func (c *Client) reqToUmamiRequestJsonBody(r *http.Request) ([]byte, error) {
 	ip := strings.TrimSpace(r.Header.Get(c.config.IpHeader))
 	if ip == "" {

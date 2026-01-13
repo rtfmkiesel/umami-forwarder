@@ -2,34 +2,26 @@ package main
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	logger "github.com/rtfmkiesel/kisslog"
-
 	"github.com/rtfmkiesel/umami-forwarder/umami"
 )
 
-var (
-	mainLog        = logger.New("main.go")
-	version string = "@DEV" // Adjusted by the Makefile
-)
-
 func main() {
-	if err := logger.InitDefault("umami-forwarder" + version); err != nil {
-		panic(err)
-	}
-
 	config, err := umami.ConfigFromEnv()
 	if err != nil {
-		mainLog.Fatal(err)
+		log.Fatal(err)
 	}
+	log.Printf("Loaded config '%#v'\n", config)
+
 	umamiClient, err := umami.NewClient(config)
 	if err != nil {
-		mainLog.Fatal(err)
+		log.Fatal(err)
 	}
 
 	httpSrv := &http.Server{
@@ -39,10 +31,11 @@ func main() {
 		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      10 * time.Second,
 	}
+
 	go func() {
-		mainLog.Info("Starting forwarder server on :8080\n")
+		log.Printf("Starting forwarder server on :8080\n")
 		if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			mainLog.Fatal("error while running forwarder server: %s", err)
+			log.Fatalf("Error while running forwarder server: %s", err)
 		}
 	}()
 
@@ -50,10 +43,10 @@ func main() {
 	signal.Notify(chanSignal, syscall.SIGINT, syscall.SIGTERM)
 	<-chanSignal
 
-	mainLog.Info("Shutting down forwarder server...")
+	log.Printf("Shutting down forwarder server...\n")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := httpSrv.Shutdown(ctx); err != nil {
-		mainLog.Fatal("error while stopping forwarder server: %s", err)
+		log.Fatalf("Error while stopping forwarder server: %s\n", err)
 	}
 }

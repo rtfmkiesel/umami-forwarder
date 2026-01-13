@@ -1,10 +1,9 @@
 package umami
 
 import (
+	"log"
 	"net/http"
 	"path/filepath"
-
-	logger "github.com/rtfmkiesel/kisslog"
 )
 
 var commonMediaFiles = map[string]bool{
@@ -41,8 +40,8 @@ var commonMediaFiles = map[string]bool{
 	".eot":   true,
 }
 
-var filterLog = logger.New("umami/filter.go")
-
+// Checks based on IP filter, custom user media filter
+// or common media filter if a request should be imported
 func (c *Client) shouldImportReq(r *http.Request) bool {
 	if c.config.SkipFiltering {
 		return true
@@ -50,22 +49,22 @@ func (c *Client) shouldImportReq(r *http.Request) bool {
 
 	// IP filter
 	ip := r.Header.Get(c.config.IpHeader)
-	if exists := c.config.IgnoreIps[ip]; exists {
-		filterLog.Debug("Skipping request from IP %s (user IP filter)", ip)
+	if exists := c.config.IgnoreIPs[ip]; exists {
+		log.Printf("Skipping request from IP %s (user IP filter)\n", ip)
 		return false
 	}
 
 	ext := filepath.Ext(r.URL.Path)
 
-	// Custom user filter
+	// Custom user media filter
 	if exists := c.config.IgnoreExtensions[ext]; exists {
-		filterLog.Debug("Skipping request with extension %s (user media filter)", ext)
+		log.Printf("Skipping request with extension %s (user media filter)\n", ext)
 		return false
 	}
 
 	// Common media files filter
 	if exists := commonMediaFiles[ext]; exists {
-		filterLog.Debug("Skipping request with extension %s (media filter)", ext)
+		log.Printf("Skipping request with extension %s (media filter)\n", ext)
 		return false
 	}
 
